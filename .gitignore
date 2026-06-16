@@ -1,0 +1,44 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+tfplan
+*.tfplan
+
+# Kubernetes and cloud credentials
+kubeconfig*
+*.kubeconfig
+.kube/
+.aws/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+*.secret.*
+
+# Local tooling
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+*.log
+
+# Build and editor output
+dist/
+build/
+tmp/
+.idea/
+.vscode/
+
