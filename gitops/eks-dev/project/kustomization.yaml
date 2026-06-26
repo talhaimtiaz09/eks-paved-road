@@ -1,0 +1,17 @@
+# References the GitOps repo's eks-project AppProject and adds THIS repo to its
+# allowed sourceRepos — required because the root-app and the repointed secrets
+# app are served from here. No project manifest is copied.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - github.com/talhaimtiaz09/argocd-gitops-config//project/eks-project.yaml?ref=main
+
+patches:
+  - target:
+      kind: AppProject
+      name: eks-project
+    patch: |-
+      - op: add
+        path: /spec/sourceRepos/-
+        value: https://github.com/talhaimtiaz09/eks-paved-road.git

@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars and adjust. terraform.tfvars is gitignored (*.tfvars).
+# All values have safe defaults; override only what you need.
+
+region          = "us-east-1"
+project         = "eks-paved-road"
+environment     = "dev"
+cluster_version = "1.31"
+
+# Spot t3.small node group (cost rule).
+node_instance_types = ["t3.small"]
+node_desired_size   = 1
+node_min_size       = 1
+node_max_size       = 2
+
+# Optional: extra IAM principals granted cluster-admin (the Terraform caller is
+# added automatically). Example:
+# cluster_admin_arns = ["arn:aws:iam::123456789012:role/eks-admin"]
+cluster_admin_arns = []
+
+# Secrets Manager secret name. The VALUE is set out-of-band, never here.
+db_secret_name = "eks-paved-road/dev/web-db-credentials"

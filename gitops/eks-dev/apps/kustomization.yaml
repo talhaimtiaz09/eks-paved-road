@@ -1,0 +1,42 @@
+# App-of-apps children for the dev EKS environment. REFERENCES the three GitOps
+# repo Application manifests (never copies them) and patches the env-specific bits:
+#
+#   1. eks-external-secrets : inject the ESO IRSA role ARN (the one post-apply
+#      value). Committed as a sentinel; bootstrap/install.sh seds in the real ARN
+#      from `terraform output eso_irsa_role_arn`. The ARN is NOT a secret.
+#   2. eks-secrets          : repoint at THIS repo's patched secrets overlay so
+#      region + secret name are resolved (see ../secrets).
+#   3. eks-web              : referenced unchanged (no placeholders).
+#
+# The eks/apps/root-app.yaml from the GitOps repo is intentionally NOT referenced:
+# it is self-referential (pulls these same children, unpatched, straight from the
+# GitOps repo). ../root-app.yaml replaces it as this environment's app-of-apps.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - github.com/talhaimtiaz09/argocd-gitops-config//eks/apps/external-secrets-operator.yaml?ref=main
+  - github.com/talhaimtiaz09/argocd-gitops-config//eks/apps/secrets.yaml?ref=main
+  - github.com/talhaimtiaz09/argocd-gitops-config//eks/apps/web.yaml?ref=main
+
+patches:
+  # 1. ESO IRSA role ARN — helm parameter index 1 (index 0 is installCRDs).
+  - target:
+      kind: Application
+      name: eks-external-secrets
+    patch: |-
+      - op: replace
+        path: /spec/source/helm/parameters/1/value
+        value: REPLACE_ME_ESO_IRSA_ROLE_ARN
+
+  # 2. Repoint the secrets app at this repo's patched overlay (region + name).
+  - target:
+      kind: Application
+      name: eks-secrets
+    patch: |-
+      - op: replace
+        path: /spec/source/repoURL
+        value: https://github.com/talhaimtiaz09/eks-paved-road.git
+      - op: replace
+        path: /spec/source/path
+        value: gitops/eks-dev/secrets

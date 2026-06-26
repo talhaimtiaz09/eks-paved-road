@@ -1,0 +1,26 @@
+# App-of-apps for the dev EKS environment. Points at THIS repo's apps overlay,
+# which references the GitOps repo children and injects the env-specific values.
+# Applying this is the single GitOps entrypoint (bootstrap does it for you):
+#   ESO (wave 1) -> SecretStore/ExternalSecret (wave 2) -> web (wave 3).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: eks-dev-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: eks-project
+  source:
+    repoURL: https://github.com/talhaimtiaz09/eks-paved-road.git
+    targetRevision: main
+    path: gitops/eks-dev/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
