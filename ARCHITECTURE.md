@@ -105,11 +105,11 @@ Wraps `terraform-aws-modules/eks/aws` v20. Purpose: a Kubernetes control plane p
 small, cheap, self-managed-by-EKS pool of nodes — and, critically, the **OIDC provider**
 that makes keyless IAM possible.
 
-- **Control plane** at Kubernetes `1.31`. **Public API endpoint** so `kubectl` /
+- **Control plane** at Kubernetes `1.35`. **Public API endpoint** so `kubectl` /
   `argocd` port-forward works from a workstation; **nodes stay private**.
 - **`enable_irsa = true`** → EKS creates an **IAM OIDC identity provider** for the
   cluster's issuer. This is the linchpin of the security model (see Layer 3).
-- **One spot `t3.small` managed node group** (`min 1 / desired 1 / max 2`,
+- **One spot `t3.small` managed node group** on Amazon Linux 2023 (`min 1 / desired 1 / max 2`,
   `capacity_type = SPOT`) in the private subnets — the cost rule.
 - **Access via EKS access entries** (`authentication_mode = API_AND_CONFIG_MAP`,
   `enable_cluster_creator_admin_permissions = true`, plus optional

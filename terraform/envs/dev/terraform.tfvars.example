@@ -4,7 +4,7 @@
 region          = "us-east-1"
 project         = "eks-paved-road"
 environment     = "dev"
-cluster_version = "1.31"
+cluster_version = "1.35"
 
 # Spot t3.small node group (cost rule).
 node_instance_types = ["t3.small"]
