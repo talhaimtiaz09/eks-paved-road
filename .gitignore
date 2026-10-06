@@ -26,6 +26,8 @@ kubeconfig*
 *.pfx
 secrets/
 *.secret.*
+# The GitOps secrets overlay holds only references, never values.
+!gitops/eks-dev/secrets/
 
 # Local tooling
 .env
