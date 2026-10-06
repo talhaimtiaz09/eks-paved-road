@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EKS Paved Road</title>
+<meta name="description" content="Personal AWS lab by Talha Imtiaz: an EKS cluster built with Terraform and handed to Argo CD, with secrets pulled from AWS Secrets Manager over IRSA and no static keys in the cluster.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Theme follows talhaimtiaz.me case studies: warm cream canvas, lime accent,
+   Space Grotesk for the hero, Geist for reading. Dark is the site's matte carbon. */
+:root {
+  --canvas: #f4efe4;
+  --band: #f8f3e8;
+  --surface: #fdfbf5;
+  --surface-muted: #efe8db;
+  --ink: #2b2720;
+  --ink-strong: #1a1610;
+  --muted: #6b6555;
+  --soft: #8c8678;
+  --line: #e0d8c7;
+  --line-strong: #847b66;
+  --accent: #6e8710;
+  --accent-dot: #a7b64e;
+  --code-ink: #5c7010;
+  --danger: #a8321f;
+
+  --f-head: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Geist", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #040404;
+    --band: #0f100d;
+    --surface: #131313;
+    --surface-muted: #1e1f1a;
+    --ink: #dcddd3;
+    --ink-strong: #f8f8f4;
+    --muted: #a0a298;
+    --soft: #76786f;
+    --line: #2d2e28;
+    --line-strong: #82847a;
+    --accent: #b8d94a;
+    --accent-dot: #b8c674;
+    --code-ink: #c9e85f;
+    --danger: #e07a64;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas: #040404;
+  --band: #0f100d;
+  --surface: #131313;
+  --surface-muted: #1e1f1a;
+  --ink: #dcddd3;
+  --ink-strong: #f8f8f4;
+  --muted: #a0a298;
+  --soft: #76786f;
+  --line: #2d2e28;
+  --line-strong: #82847a;
+  --accent: #b8d94a;
+  --accent-dot: #b8c674;
+  --code-ink: #c9e85f;
+  --danger: #e07a64;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--accent); color: var(--canvas); }
+a { color: var(--accent); font-weight: 600; text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.wrap { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+.read { max-width: 720px; }
+@media (min-width: 640px) { .wrap { padding: 0 40px; } }
+
+/* nav */
+.nav { border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 60px; }
+.nav .name { font-family: var(--f-head); font-weight: 700; color: var(--ink-strong); font-size: 16px; }
+.nav ul { display: flex; gap: 20px; list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.nav ul a { color: var(--muted); font-weight: 500; }
+.nav ul a:hover { color: var(--ink-strong); text-decoration: none; }
+
+/* hero */
+.hero { padding: 56px 0 48px; border-bottom: 1px solid var(--line); }
+@media (min-width: 900px) { .hero { padding: 88px 0 64px; } }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.pill {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  padding: 3px 12px; color: var(--ink);
+}
+h1 {
+  font-family: var(--f-head); font-weight: 700; color: var(--ink-strong);
+  font-size: clamp(2.1rem, 1.3rem + 3.4vw, 3.9rem);
+  line-height: 1.06; letter-spacing: -0.02em;
+  max-width: 900px; margin: 0;
+}
+.summary { margin: 24px 0 0; max-width: 680px; font-size: clamp(1.05rem, 1rem + 0.35vw, 1.25rem); line-height: 1.6; color: var(--muted); }
+.spec {
+  display: grid; gap: 20px; grid-template-columns: 1fr;
+  margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--line); max-width: 800px;
+}
+@media (min-width: 640px) { .spec { grid-template-columns: 1fr 2fr auto; } }
+.spec dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 6px; }
+.spec dd { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.45; color: var(--ink); }
+
+/* figures */
+figure { margin: 0; }
+.frame { border: 1px solid var(--line); border-radius: 16px; padding: 8px; background: var(--surface); }
+.frame img { display: block; width: 100%; height: auto; border-radius: 10px; }
+figure.hero-fig { margin-top: 48px; }
+figure.diagram { margin: 40px 0; }
+figcaption { margin-top: 12px; text-align: center; font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--soft); }
+/* Until the image file exists, show a labelled slot instead of a broken image. */
+figure.missing img { display: none; }
+figure.missing .frame {
+  aspect-ratio: 3 / 2; border-style: dashed; border-color: var(--line-strong);
+  background: var(--surface-muted); display: grid; place-items: center; padding: 24px; text-align: center;
+}
+figure.missing .frame::after {
+  content: "Diagram slot · " attr(data-file);
+  font-family: var(--f-mono); font-size: 12px; color: var(--muted);
+}
+
+/* reading band */
+main { background: var(--band); border-bottom: 1px solid var(--line); padding: 48px 0 72px; }
+@media (min-width: 900px) { main { padding: 80px 0 96px; } }
+.lead { font-size: clamp(1.2rem, 1.1rem + 0.4vw, 1.375rem); line-height: 1.55; color: var(--ink-strong); margin: 0 0 32px; letter-spacing: -0.01em; }
+h2 {
+  font-family: var(--f-body); font-weight: 600; color: var(--ink-strong);
+  font-size: clamp(1.375rem, 1.2rem + 0.8vw, 1.875rem); letter-spacing: -0.015em; line-height: 1.25;
+  margin: 64px 0 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
+}
+h3 { font-weight: 600; font-size: 1.2rem; color: var(--ink-strong); margin: 40px 0 8px; letter-spacing: -0.01em; }
+p { margin: 18px 0; }
+ul.dots { list-style: none; padding: 0; margin: 20px 0; }
+ul.dots li { position: relative; padding-left: 22px; margin: 10px 0; }
+ul.dots li::before { content: ""; position: absolute; left: 2px; top: 0.72em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-dot); }
+code {
+  font-family: var(--f-mono); font-size: 0.86em; font-weight: 500; color: var(--code-ink);
+  background: var(--surface-muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+  overflow-wrap: anywhere;
+}
+strong { color: var(--ink-strong); font-weight: 600; }
+
+/* code block */
+.code { margin: 32px 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--surface); }
+.code-head { display: flex; justify-content: space-between; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--line); font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.code pre { margin: 0; padding: 18px 20px; overflow-x: auto; font-family: var(--f-mono); font-size: 13.5px; line-height: 1.75; color: var(--ink); }
+.code pre .c { color: var(--soft); }
+
+/* decision card (same shape as the site's <Decision>) */
+.decision { margin: 32px 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.decision .tag { padding: 10px 20px; border-bottom: 1px solid var(--line); font-family: var(--f-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.decision .pair { display: grid; grid-template-columns: 1fr; gap: 1px; background: var(--line); }
+@media (min-width: 640px) { .decision .pair { grid-template-columns: 1fr 1fr; } }
+.decision .pair > div { background: var(--surface); padding: 16px 20px; }
+.decision .k { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+.decision .chose .k { color: var(--accent); }
+.decision .over .k { color: var(--soft); }
+.decision .pair p { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.45; }
+.decision .over p { color: var(--muted); }
+.decision .why { border-top: 1px solid var(--line); padding: 14px 20px; margin: 0; font-size: 15px; line-height: 1.7; color: var(--muted); }
+.decision .why strong { color: var(--ink-strong); }
+
+/* status + cost tables */
+.table-wrap { overflow-x: auto; margin: 24px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.5; }
+th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--f-mono); font-size: 14px; white-space: nowrap; }
+.state { font-weight: 600; width: 45%; }
+.state.done { color: var(--accent); }
+.state.todo { color: var(--soft); }
+.note { font-size: 13px; color: var(--soft); margin-top: -8px; }
+
+/* footer */
+footer { padding: 40px 0 56px; font-size: 14px; color: var(--muted); }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+footer ul { display: flex; flex-wrap: wrap; gap: 20px; list-style: none; margin: 0; padding: 0; }
+footer a { color: var(--muted); font-weight: 500; }
+footer a:hover { color: var(--ink-strong); }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Site">
+  <div class="wrap">
+    <a class="name" href="https://talhaimtiaz.me">Talha Imtiaz</a>
+    <ul>
+      <li><a href="https://github.com/talhaimtiaz09/eks-paved-road">Repository</a></li>
+      <li><a href="https://talhaimtiaz.me">Portfolio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="pills">
+      <span class="pill">Personal project</span>
+      <span class="pill">AWS lab</span>
+      <span class="pill">In progress</span>
+    </div>
+    <h1>The App-of-Apps That Shipped Its Own Placeholders: An EKS Paved Road on Argo CD</h1>
+    <p class="summary">An EKS cluster where Terraform builds the infrastructure and Argo CD owns everything inside it. The two halves live in separate repos and meet at exactly three values, none of them secret. The obvious way to wire the app-of-apps across that seam deploys the placeholders instead of the values. This is how I avoided that.</p>
+    <dl class="spec">
+      <div><dt>Role</dt><dd>DevOps Engineer. Design and all code.</dd></div>
+      <div><dt>Stack</dt><dd>Terraform, EKS, IRSA, Argo CD, Kustomize, External Secrets Operator, AWS Secrets Manager</dd></div>
+      <div><dt>Code</dt><dd><a href="https://github.com/talhaimtiaz09/eks-paved-road">GitHub ↗</a></dd></div>
+    </dl>
+    <figure class="hero-fig">
+      <div class="frame" data-file="images/eks-architecture.png">
+        <img src="images/eks-architecture.png" width="1536" height="1024" alt="Architecture: Terraform builds a VPC with one NAT gateway and an EKS cluster with a spot node group in private subnets and an OIDC provider. Inside the cluster, Argo CD syncs from Git. The External Secrets Operator assumes an IAM role through IRSA, reads one secret from AWS Secrets Manager and writes it into a Kubernetes Secret that the web pods consume. Operators reach Argo CD only through kubectl port-forward." onerror="this.closest('figure').classList.add('missing')">
+      </div>
+      <figcaption>Terraform builds the cluster, Git drives what runs in it</figcaption>
+    </figure>
+  </div>
+</header>
+
+<main>
+  <div class="wrap"><div class="read">
+
+    <p class="lead">Most EKS demos stop once the cluster is up. This lab is about what comes after: a cluster an app team could be handed, where infrastructure and workloads change through Git, and the only thing that crosses between the two is a role ARN, a region and a secret name.</p>
+
+    <h2>The situation</h2>
+    <p>This is a personal lab, not client work. It has no users and no traffic, and nothing on this page is a production claim. I'm building it in public and writing it up as I go, so the table below is the real state of it today.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Part</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td>Terraform: VPC, EKS, IRSA, Secrets Manager secret</td><td class="state done">Written, passes fmt and validate</td></tr>
+          <tr><td>Bootstrap: Argo CD install and handover</td><td class="state done">Written</td></tr>
+          <tr><td>GitOps overlay over <code>argocd-gitops-config</code></td><td class="state done">Written</td></tr>
+          <tr><td>First apply on a real cluster</td><td class="state todo">Not run</td></tr>
+          <tr><td>Observability, Karpenter, CI security gates</td><td class="state todo">Not started</td></tr>
+          <tr><td>Failure drills and runbooks</td><td class="state todo">Not run</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Why split it at all</h2>
+    <p>The quick way to put an app on EKS is one Terraform root that builds the cluster and then uses the Helm and Kubernetes providers to install everything inside it. It works on day one. After that, every change to a Deployment goes through <code>terraform apply</code>, nothing notices when someone edits the cluster by hand, and the Kubernetes provider can't plan against a cluster that doesn't exist yet.</p>
+    <p>So the line is drawn at the cluster boundary. Terraform builds the VPC, the cluster, the IAM it needs, and stops. Argo CD owns everything inside the cluster and reverts drift on its own. The question this raises is how the cluster-side manifests learn things only Terraform knows, like the ARN of a role it just created, without copying manifests between repos or putting anything secret in Git.</p>
+
+    <h2>What I built</h2>
+
+    <h3>Terraform stops at the cluster</h3>
+    <p>The root module in <code>terraform/envs/dev</code> wires three thin modules around the official <code>terraform-aws-modules</code> VPC and EKS modules. The VPC spans two Availability Zones with public and private subnets and exactly one NAT gateway. EKS runs Kubernetes 1.35 with a single spot <code>t3.small</code> managed node group on Amazon Linux 2023 in the private subnets, and the OIDC provider turned on for IRSA.</p>
+    <p>Cluster access uses EKS access entries rather than the <code>aws-auth</code> ConfigMap, so Terraform never needs a Kubernetes provider. The whole apply talks only to AWS APIs, which means it can plan from an empty account and destroy cleanly at the end of a session. State sits in a versioned, encrypted S3 bucket with a DynamoDB lock table, the only thing left running between sessions.</p>
+
+    <h3>Two repos, three values</h3>
+    <p>The Argo CD Applications, the External Secrets wiring and the sample <code>web</code> app live in a separate repo, <a href="https://github.com/talhaimtiaz09/argocd-gitops-config">argocd-gitops-config</a>, which I also use for a local kind lab. Its EKS manifests carry three placeholders: the ESO role ARN, the AWS region and the Secrets Manager secret name.</p>
+    <p>This repo doesn't copy those manifests. <code>gitops/eks-dev</code> is a Kustomize overlay that references them by URL and patches in the three values. Region and secret name are fixed, so they're committed. The role ARN only exists after <code>terraform apply</code>, so <code>bootstrap/install.sh</code> reads it from <code>terraform output</code> and writes it into the overlay, to be committed and pushed. An ARN identifies a role, it doesn't grant access to one, so it's safe in Git.</p>
+    <div class="decision">
+      <div class="tag">Engineering decision</div>
+      <div class="pair">
+        <div class="chose"><div class="k">Chose</div><p>Reference the GitOps repo and patch three values in an overlay</p></div>
+        <div class="over"><div class="k">Over</div><p>Copying the manifests into this repo and editing them</p></div>
+      </div>
+      <p class="why"><strong>Why: </strong>A copy drifts from the original the first time either side changes. A reference keeps one source of truth, and the overlay shows in a few lines exactly what is environment-specific. The cost is that a breaking change upstream reaches this environment on its next sync, because the references track <code>main</code>.</p>
+    </div>
+
+    <h3>The app-of-apps that shipped its own placeholders</h3>
+    <p>The GitOps repo already has an app-of-apps for EKS: a root Application that points at its own <code>eks/apps</code> directory and creates three child Applications from it. The obvious move is to apply that root and patch the children in the overlay.</p>
+    <p>It doesn't work. Kustomize can patch the root Application before it's applied, but Argo CD then fetches the children itself, straight from the GitOps repo, unpatched. The External Secrets Operator would install with <code>REPLACE_ME_ESO_IRSA_ROLE_ARN</code> as its role annotation, and the SecretStore would look for a region called <code>REPLACE_ME_AWS_REGION</code>. Everything syncs green, and nothing can read a secret.</p>
+    <figure class="diagram">
+      <div class="frame" data-file="images/eks-root-app.png">
+        <img src="images/eks-root-app.png" width="1536" height="1024" alt="Two app-of-apps designs compared. Rejected: the GitOps repo's own root Application re-pulls its children straight from that repo, so they deploy with placeholder values. Chosen: a root Application in this repo points at a Kustomize overlay that references the same three children and patches in the role ARN, region and secret name, so Argo CD renders the patched versions." loading="lazy" onerror="this.closest('figure').classList.add('missing')">
+      </div>
+      <figcaption>Where the placeholders get filled, in each design</figcaption>
+    </figure>
+    <p>So this repo has its own root, <code>gitops/eks-dev/root-app.yaml</code>. It points at the overlay's <code>apps/</code> directory, which references the same three child Applications and patches them there. The one that needs the role ARN gets it as a Helm parameter. The one that deploys the SecretStore is repointed at this repo's <code>secrets/</code> overlay, which patches region and secret name. Argo CD renders the overlay, so what it applies is already filled in.</p>
+    <div class="code">
+      <div class="code-head"><span>gitops/eks-dev/apps/kustomization.yaml</span><span>excerpt</span></div>
+<pre><span class="c"># same three children, referenced, never copied</span>
+resources:
+  - https://raw.githubusercontent.com/.../eks/apps/external-secrets-operator.yaml
+  - https://raw.githubusercontent.com/.../eks/apps/secrets.yaml
+  - https://raw.githubusercontent.com/.../eks/apps/web.yaml
+patches:
+  - target: { kind: Application, name: eks-external-secrets }
+    patch: |-
+      - op: replace
+        path: /spec/source/helm/parameters/1/value
+        value: REPLACE_ME_ESO_IRSA_ROLE_ARN   <span class="c"># bootstrap writes the real ARN</span>
+  - target: { kind: Application, name: eks-secrets }
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: gitops/eks-dev/secrets</pre>
+    </div>
+    <p>One Kustomize detail needed a fix. The <code>github.com/org/repo//path?ref=</code> form only works for a directory that has its own <code>kustomization.yaml</code>. <code>eks/secrets</code> has one, so it's referenced that way. The single Application files and the AppProject don't, so they're referenced by raw URL.</p>
+    <div class="decision">
+      <div class="tag">Engineering decision</div>
+      <div class="pair">
+        <div class="chose"><div class="k">Chose</div><p>A root Application per environment, in the environment's repo</p></div>
+        <div class="over"><div class="k">Over</div><p>Applying the shared root from the GitOps repo and patching it</p></div>
+      </div>
+      <p class="why"><strong>Why: </strong>A patch on a parent never reaches children that Argo CD fetches on its own. Owning the root means the environment decides what its children look like. The cost is one more Application manifest, and the upstream EKS root goes unused.</p>
+    </div>
+
+    <h3>No AWS keys in the cluster</h3>
+    <p>The web app needs database credentials. They live in AWS Secrets Manager and nowhere else. Terraform creates the secret as an empty container, with no <code>aws_secretsmanager_secret_version</code>, so the value never reaches Git or Terraform state. It's set once by hand with <code>aws secretsmanager put-secret-value</code>.</p>
+    <p>The External Secrets Operator reads it through IRSA. Its ServiceAccount is annotated with the role ARN, and the role's trust policy only accepts a token from that exact ServiceAccount, <code>external-secrets:external-secrets</code>, with the <code>sts.amazonaws.com</code> audience. The role can call <code>GetSecretValue</code> and <code>DescribeSecret</code> on one secret ARN and nothing else. The SecretStore uses <code>auth: {}</code>, so it picks up those short-lived credentials from the controller instead of a stored key.</p>
+    <figure class="diagram">
+      <div class="frame" data-file="images/eks-secret-path.png">
+        <img src="images/eks-secret-path.png" width="1536" height="1024" alt="Secret path in three sync waves. Wave 1: Argo CD installs the External Secrets Operator with an IRSA-annotated ServiceAccount. Wave 2: a SecretStore and ExternalSecret are applied; ESO assumes the IAM role through the cluster OIDC provider and reads one secret from AWS Secrets Manager into a Kubernetes Secret. Wave 3: the web Deployment consumes that Secret as environment variables. No static AWS keys exist anywhere in the cluster." loading="lazy" onerror="this.closest('figure').classList.add('missing')">
+      </div>
+      <figcaption>From Secrets Manager to the pod, with no stored keys</figcaption>
+    </figure>
+    <p>Sync waves put it in order. Wave 1 installs ESO and its CRDs, wave 2 applies the SecretStore and ExternalSecret, and wave 3 deploys <code>web</code>, which loads the resulting Secret with <code>envFrom</code>. The ExternalSecret refreshes hourly, so a value rotated in Secrets Manager reaches the Kubernetes Secret without a commit. The pods only pick it up on restart, because <code>envFrom</code> is read when a container starts.</p>
+    <div class="decision">
+      <div class="tag">Engineering decision</div>
+      <div class="pair">
+        <div class="chose"><div class="k">Chose</div><p>IRSA on ESO's ServiceAccount, scoped to one secret ARN</p></div>
+        <div class="over"><div class="k">Over</div><p>Secrets Manager access on the node IAM role</p></div>
+      </div>
+      <p class="why"><strong>Why: </strong>Anything granted to the node role is available to every pod on the node. Binding it to one ServiceAccount means only the ESO controller can read the secret, and only that secret. The cost is a role per controller and an OIDC trust to keep correct, which Terraform owns.</p>
+    </div>
+
+    <h3>One manual step, then Git</h3>
+    <p><code>bootstrap/install.sh</code> is the only thing run by hand after <code>terraform apply</code>. It writes the role ARN into the overlay, installs Argo CD from a pinned Helm chart (<code>7.7.11</code>, Argo CD 2.13) using the values file from the GitOps repo, then applies the AppProject and the root Application. After that, every Application syncs automatically with prune and self-heal on, so a hand edit in the cluster gets reverted to what's in Git.</p>
+    <p>There's no LoadBalancer anywhere. The Argo CD UI is reached with <code>kubectl port-forward</code>. A <code>type: LoadBalancer</code> Service creates an AWS load balancer that bills by the hour and isn't removed by <code>terraform destroy</code>, because Terraform never knew about it. Port-forward costs nothing and needs nothing public.</p>
+
+    <h2>What it costs</h2>
+    <p>The cluster is destroyed at the end of each session. Only the state bucket and lock table stay. An AWS Budget alert at $5 a month was in place before anything else.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Resource</th><th>Approx. per hour</th></tr></thead>
+        <tbody>
+          <tr><td>EKS control plane</td><td class="num">~$0.10</td></tr>
+          <tr><td>NAT gateway (one)</td><td class="num">~$0.045 + data</td></tr>
+          <tr><td>1 × t3.small spot node</td><td class="num">~$0.007</td></tr>
+          <tr><td>Secrets Manager secret</td><td class="num">~$0.40 / month</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">On-demand list prices in us-east-1 used for planning, not a bill. Spot prices vary. The control plane price holds only while the Kubernetes version is in standard support; after that EKS bills extended support at ~$0.60 an hour.</p>
+    <p>The control plane is the floor and can't be avoided, so the rest is about not adding to it: one NAT gateway instead of one per AZ, spot nodes, no managed database, and no load balancers.</p>
+
+    <h2>What's left</h2>
+    <ul class="dots">
+      <li><strong>The first real apply.</strong> Everything above is written and validated offline. The next session brings the cluster up and checks that the secret actually lands in the pod.</li>
+      <li><strong>Observability and autoscaling.</strong> Prometheus, Grafana and Loki through Argo CD, and Karpenter in place of the fixed node group, with consolidation measured rather than assumed.</li>
+      <li><strong>CI gates.</strong> fmt, validate, tflint and trivy on Terraform, image scanning, and a manifest render check so a broken overlay fails a pull request instead of a sync.</li>
+      <li><strong>Failure drills.</strong> Delete a synced resource and time the self-heal, rotate the secret and watch it propagate, rebuild from zero. Results go in a runbook per drill, published as measured.</li>
+    </ul>
+
+    <h2>What production would add</h2>
+    <p>This is a lab, and some gaps are on purpose to keep it cheap. Before real workloads I'd close them:</p>
+    <ul class="dots">
+      <li><strong>Pinned GitOps references.</strong> The overlay tracks <code>main</code> of the GitOps repo. Production pins a tag or commit and promotes it.</li>
+      <li><strong>A tighter AppProject.</strong> <code>eks-project</code> allows every resource kind. Production splits platform add-ons from workloads, each with its own allow-list.</li>
+      <li><strong>A private API endpoint</strong>, or a public one limited to known CIDRs.</li>
+      <li><strong>Egress in every AZ.</strong> One NAT gateway is a single point of failure.</li>
+      <li><strong>Argo CD behind TLS and SSO</strong> instead of <code>server.insecure</code> over port-forward.</li>
+      <li><strong>On-demand capacity</strong> alongside spot, so a spot reclaim can't take out every node.</li>
+    </ul>
+
+  </div></div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Talha Imtiaz · DevOps Engineer</span>
+    <ul>
+      <li><a href="https://github.com/talhaimtiaz09/eks-paved-road">Repository</a></li>
+      <li><a href="https://talhaimtiaz.me">talhaimtiaz.me</a></li>
+      <li><a href="https://github.com/talhaimtiaz09">GitHub</a></li>
+      <li><a href="https://linkedin.com/in/talha-imtiaz342">LinkedIn</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -2,6 +2,10 @@
 
 Production-grade EKS paved road built with Terraform, GitOps, Karpenter, security gates, and observability.
 
+**Project page:** https://talhaimtiaz09.github.io/eks-paved-road/
+
+![Architecture: Terraform builds a VPC with one NAT gateway and an EKS cluster with an OIDC provider. Argo CD syncs from Git; the External Secrets Operator assumes an IAM role through IRSA, reads one secret from AWS Secrets Manager and hands it to the web pods. No static AWS keys, no LoadBalancer.](docs/images/eks-architecture.png)
+
 ## Goal
 
 Build a reproducible AWS EKS platform that an application team could use safely:
@@ -36,9 +40,12 @@ Build a reproducible AWS EKS platform that an application team could use safely:
 ├── .github/workflows/      # CI security and validation gates (Phase 4)
 ├── bootstrap/              # Thin post-apply step: install Argo CD, hand over to GitOps
 ├── docs/
+│   ├── index.html          # Project page
+│   ├── images/             # Diagrams used by the page and this README
 │   ├── diagrams/           # Architecture diagrams and exported images
 │   └── runbooks/           # Incident and disaster recovery runbooks
 ├── gitops/eks-dev/         # Kustomize overlay that REFERENCES the GitOps repo + injects env values
+├── prompts/                # Image-generation prompts for the diagrams
 ├── terraform/
 │   ├── envs/dev/           # Deployable dev environment root module
 │   └── modules/
